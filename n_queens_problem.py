@@ -3,17 +3,18 @@
 Created on Mon May 08 16:39:52 2017
 
 @author: Michael Borden
+
+This program hopes to solve the N-Queens problem using genetic algorithms.
 """
 import numpy as np
-#from multiprocessing import Process, Manager
 import operator
 import time
-#import datetime
 from sys import stdout
 from math import sqrt
 
-N_QUEENS          = 30        # Number of Queens MUST BE EVEN!!!
-INIT_POPUL        = 1000     # N_QUEENS**2  # Size of total population
+# CONST
+N_QUEENS          = 30        # !!!MUST BE EVEN!!! Number of Queens 
+INIT_POPUL        = 1000      # N_QUEENS**2  # Size of total population
 MAX_GEN           = 4000      # Maximum generations
 FIT_VAL           = 0         # Minimum fitness value allowed to mate (giggidy)
 MUT_RATE          = 200       # 1 / MUT_RATE
@@ -23,10 +24,10 @@ PRINT_EVERY_N_GEN = 1         # Prints information every N generatons. Costly!
 BEST_FIT          = 0         # Holds the value of the current best fitness value
 MUTATION_COUNT    = 0         # How man mutations have occurred
 QUEEN_SYMBOL      = 'Q'       # '1\033[4mQ\033[0m'
-EMPTY_SYMBOL      = '_'
+EMPTY_SYMBOL      = '_'       # Empty spot
 
 
-# Creates an initial population of 
+# Creates an initial population of boards with queens placed in their own row.
 def create_population():
     global INIT_POPUL
     board_popul = []
@@ -37,32 +38,33 @@ def create_population():
         board = []
         for m in range(N_QUEENS):
             row = np.array([EMPTY_SYMBOL] * N_QUEENS, dtype=str)
-            q_pos = np.random.randint(0, N_QUEENS)
-            row[q_pos] = QUEEN_SYMBOL
+            queen_pos = np.random.randint(0, N_QUEENS)
+            row[queen_pos] = QUEEN_SYMBOL
             board.append(row)
         board_popul.append(board)
         restart_line()
     board_popul = np.reshape(np.array(board_popul), (INIT_POPUL,N_QUEENS, N_QUEENS))
     return board_popul
 
-# Checks the Queens in the same row
+# Checks to see if Queens are alone in their own row
 def queen_alone_in_row(board,x):
     if (np.count_nonzero(board[x] == QUEEN_SYMBOL) == 1):
-            return True
+        return True
     else:
         return False
 
-# Checks the Queens in the same column
+# Checks to see if Queens are alone in their own column
 def queen_alone_in_column(board,y):
     if (np.count_nonzero(board[:,y] == QUEEN_SYMBOL) == 1):
-            return True
+        return True
     else:
         return False
 
-# Checks for Queens in the same diagonals
+# Checks to see if Queens are alone in their own diagonals
 def queen_alone_in_diagonals(board,x,y):
     global N_QUEENS
-    if ((np.count_nonzero(board.diagonal(y-x) == QUEEN_SYMBOL) == 1) and (np.count_nonzero(board[:,::-1].diagonal(N_QUEENS-(x+y+1)) == QUEEN_SYMBOL)) == 1):
+    if ((np.count_nonzero(board.diagonal(y-x) == QUEEN_SYMBOL) == 1) and \
+        (np.count_nonzero(board[:,::-1].diagonal(N_QUEENS-(x+y+1)) == QUEEN_SYMBOL)) == 1):
         return True
     else:
         return False
@@ -138,57 +140,6 @@ def crossover(partner_list, board_popul):
     mated_popul = np.reshape(mated_popul, (INIT_POPUL,N_QUEENS, N_QUEENS))
     return mated_popul
 
-'''DON'T WORRY ABOUT THIS
-
-def threaded_worker(row, mc):
-    print("Working")
-    for ibit, bit in enumerate(row):
-        if (np.random.randint(0, MUT_RATE) == 0):
-            mc += 1
-            if (bit[ibit] == 1):
-                bit[ibit] = 0
-            else:
-                bit[ibit] = 1
-  
-def thread_mutation(mated_list):
-    buff_mate_list = []
-    for board in mated_list:
-        for row in board:
-            manager = Manager()
-            m_list = manager.list(row)
-            mc_val = manager.Value('i', 0)
-            multi_processing = Process(target=threaded_worker, args=(m_list))
-            multi_processing.start()
-            multi_processing.join()
-            buff_mate_list.extend(m_list)
-            MUTATION_COUNT += mc_val
-    mated_list = np.reshape(buff_mate_list, (INIT_POPUL,N_QUEENS, N_QUEENS))
-    return mated_list
-'''
-
-def mutation2(mated_list):
-    for xp, board in enumerate(mated_list):
-        for yp, bit in enumerate(board):
-            pass
-        
-
-# Mutates the mated_list at a rate of 1 / mut_rate
-def mutation2(mated_list, mut_rate):
-    global MUTATION_COUNT, N_QUEENS, INIT_POPUL,EMPTY_SYMBOL
-    for ix, board in enumerate(mated_list):
-        for iy, row in enumerate(board):
-            for iz, bit in enumerate(row):
-                if (np.random.randint(0, mut_rate) == 2): # Why 2? Because
-                    MUTATION_COUNT += 1
-                    if (mated_list[ix][iy][iz] == QUEEN_SYMBOL):
-                        mated_list[ix][iy][iz] = EMPTY_SYMBOL
-                    else:
-                        # To help even out the switches
-                        if (np.random.randint(0, N_QUEENS) == 3): # Why 3? Because
-                           mated_list[ix][iy][iz] = QUEEN_SYMBOL
-    mated_list = np.reshape(mated_list, (INIT_POPUL,N_QUEENS, N_QUEENS))
-    return mated_list
-
 def mutation(mated_list, mut_rate):
     global MUTATION_COUNT, N_QUEENS, INIT_POPUL,EMPTY_SYMBOL
     for ix, board in enumerate(mated_list):
@@ -204,8 +155,6 @@ def mutation(mated_list, mut_rate):
 # current generation, current date & time, ... and also the best fitness board
 def print_func(popul_fit_list, board_popul, gen, best_fit, mut_rate, square, start_time):
     global MUTATION_COUNT, PRINT_EVERY_N_GEN,N_QUEENS, INIT_POPUL
-    #time_stamp = time.time()
-    #date_and_time = datetime.datetime.fromtimestamp(time_stamp).strftime('%H:%M:%S')
     indx = max(popul_fit_list.iteritems(), key=operator.itemgetter(1))[0]
     bf = popul_fit_list[indx]
     seconds = time.time() - start_time
@@ -218,11 +167,9 @@ def print_func(popul_fit_list, board_popul, gen, best_fit, mut_rate, square, sta
         stdout.write("Current Generation  :: %d\n" % (gen))
         stdout.write("Best Fitness        :: %d / %d\n" % (bf, N_QUEENS))
         stdout.write("Best Board's Index  :: %d / %d\n" % (indx, INIT_POPUL))
-        #stdout.write("Current Time        :: %s\n" % (date_and_time))
         stdout.write("Mutation Rate       :: %0.6F%%\n" % (1 / float(mut_rate)))
         stdout.write("Mutation Count      :: %d\n" % (MUTATION_COUNT))
         stdout.write("Run Time            :: %dh:%02dm:%02ds\n" % (seconds/3600,(seconds%3600)/60,seconds%60))
-        # stdout.write("Population Size     :: %d\n" % (len(board_popul)))
         x_arr = np.array(board_popul[indx]).reshape((N_QUEENS, N_QUEENS))
         stdout.write("\n".join(str('[%s]' % '|'.join(map(str, x))) for x in x_arr))
         stdout.flush()
@@ -238,6 +185,11 @@ def restart_line():
                 
 '''''''''''''''''''''''''''''''''
         :::: MAIN ::::
+
+This is where all of the magic 
+happens, all steps are numbered
+in order to show the genetic 
+algorithm in action. Enjoy!
 '''''''''''''''''''''''''''''''''
 def main():
     global MAX_GEN, N_QUEENS, SQUR_MUT_RATE, MUT_RATE, MUTATION_COUNT
@@ -322,7 +274,7 @@ def main():
         stdout.write('\n')
         for x in range(N_QUEENS / 6):
             stdout.write("\t")
-        stdout.write("DAMN!!!\n")
+        stdout.write("DANG!!!\n")
         stdout.write("AGAIN!!\n")
         main()
         
